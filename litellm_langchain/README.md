@@ -38,11 +38,19 @@ This will start:
 
 The proxy will automatically use your `litellm_config.yaml` configuration and load environment variables from your `.env` file.
 
-### 5. Run the Example
+### 5. Create a LiteLLM "virtual key"
 
-Once LiteLLM proxy is running, you can run the example.
+Go to `http://localhost:4000`, then go to the Virtual Keys tab
 
-(Note: The example uses `o4-mini` so you might need to change that, or add the necessary config and keys to your config and env files.)
+Click `+ Create New Key`. Save this key in `~/.bashrc` (or similar).
+
+```
+export LITELLM_MASTER_KEY=your-virtual-key
+```
+
+This key will be used to authenticate with the LiteLLM proxy.
+
+### 6. Run the Example
 
 ```bash
 python get_completion_example.py
