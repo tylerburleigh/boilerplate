@@ -1,6 +1,6 @@
 # LiteLLM + LangChain Integration
 
-A minimal working Python implementation that integrates LiteLLM proxy with LangChain for unified LLM access, featuring structured JSON output via Pydantic schemas and using `o4-mini`.
+A minimal working Python implementation that integrates LiteLLM proxy with LangChain for unified LLM access, featuring structured JSON output via Pydantic schemas and configured to use OpenAI, Anthropic/Claude, and Google/Gemini models.
 
 ## Quick Start
 
@@ -14,7 +14,22 @@ Install `docker-compose`.
 
 ### 2. Set Up Environment Variables
 
-Create `litellm/.env` like `/litellm/.env.example`
+The docker-compose configuration pulls environment variables from your system. Set these in your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+
+```bash
+export LITELLM_MASTER_KEY="sk-1234"  # Your master key for LiteLLM admin
+export LITELLM_SALT_KEY="sk-1234"    # Salt key for encryption (optional, defaults to sk-1234)
+
+# LLM Provider API Keys (set the ones you plan to use)
+export OPENAI_API_KEY="your-openai-api-key"
+export ANTHROPIC_API_KEY="your-anthropic-api-key"  # For Claude models
+export GOOGLE_API_KEY="your-google-api-key"  # For Gemini models
+
+# Optional custom base URLs
+export OPENAI_BASE_URL="https://api.openai.com/v1/"  # Optional, defaults to OpenAI's API
+```
+
+Alternatively, you can create a `litellm/.env` file (see `litellm/.env.example`) but system environment variables will take precedence.
 
 ### 3. Configure LiteLLM
 
@@ -33,22 +48,24 @@ Note: You might need to `sudo docker-compose up`
 
 This will start:
 - LiteLLM proxy on `http://localhost:4000`
-- PostgreSQL database for logging and management
-- Prometheus for monitoring
+- PostgreSQL database on `localhost:5432` for logging and management
+- Prometheus on `http://localhost:9090` for monitoring
 
 The proxy will automatically use your `litellm_config.yaml` configuration and load environment variables from your `.env` file.
 
 ### 5. Create a LiteLLM "virtual key"
 
-Go to `http://localhost:4000`, then go to the Virtual Keys tab
+Go to `http://localhost:4000` and log in using your `LITELLM_MASTER_KEY` from step 2.
 
-Click `+ Create New Key`. Save this key in `~/.bashrc` (or similar).
+Navigate to the Virtual Keys tab and click `+ Create New Key`. 
 
+Save this virtual key in your shell profile:
+
+```bash
+export LITELLM_API_KEY="sk-your-generated-virtual-key"
 ```
-export LITELLM_MASTER_KEY=your-virtual-key
-```
 
-This key will be used to authenticate with the LiteLLM proxy.
+This virtual key (different from the master key) will be used by your application to authenticate with the LiteLLM proxy.
 
 ### 6. Run the Example
 
@@ -121,8 +138,13 @@ litellm_settings:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | Your OpenAI API key |
-| `LITELLM_MASTER_KEY` | Yes | LiteLLM proxy authentication key (must start with `sk-`) |
+| `LITELLM_MASTER_KEY` | Yes | Master key for LiteLLM admin access (must start with `sk-`) |
+| `LITELLM_API_KEY` | Yes | Virtual key for API authentication (obtained from LiteLLM UI) |
+| `OPENAI_API_KEY` | If using OpenAI | Your OpenAI API key |
+| `ANTHROPIC_API_KEY` | If using Claude | Your Anthropic API key for Claude models |
+| `GOOGLE_API_KEY` | If using Gemini | Your Google API key for Gemini models |
+| `LITELLM_SALT_KEY` | No | Salt key for encryption (default: `sk-1234`) |
+| `OPENAI_BASE_URL` | No | Custom OpenAI base URL (default: `https://api.openai.com/v1/`) |
 | `LITELLM_PROXY_URL` | No | Proxy URL (default: `http://localhost:4000`) |
 
 ## Architecture

@@ -2,12 +2,12 @@
 LiteLLM + LangChain Integration with Structured Output
 
 This module provides a unified interface for LLM completions using LiteLLM proxy
-with LangChain's ChatOpenAI, featuring structured JSON output via Pydantic schemas
-and the o4-mini model.
+with LangChain's ChatOpenAI, featuring structured JSON output via Pydantic schemas.
+Supports multiple model providers including OpenAI, Anthropic, and Google.
 """
 
 import os
-from typing import Union
+from typing import Union, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
@@ -18,31 +18,55 @@ class CompletionResponse(BaseModel):
     reasoning: str = Field(description="Brief explanation of the reasoning behind the answer")
 
 
-# Module-level LLM initialization for efficiency
-def _initialize_llm():
-    """Initialize the LangChain ChatOpenAI client with LiteLLM proxy configuration."""
-    proxy_url = os.getenv("LITELLM_PROXY_URL", "http://localhost:4000")
-    api_key = os.getenv("LITELLM_MASTER_KEY", "sk-1234")  # Default for local development
+# Cache for initialized LLM instances
+_llm_cache: Dict[str, Any] = {}
+
+
+def _get_llm(model: str = "gpt-4.1-nano-2025-04-14", temperature: float = 0, **kwargs):
+    """
+    Get or create a LangChain ChatOpenAI client with LiteLLM proxy configuration.
     
-    return ChatOpenAI(
-        base_url=proxy_url,
-        api_key=api_key,
-        model="o4-mini"
-    )
+    Args:
+        model: The model to use (e.g., "gpt-4.1-nano-2025-04-14")
+        temperature: Temperature setting for the model (default: 0)
+        **kwargs: Additional parameters to pass to ChatOpenAI
+        
+    Returns:
+        ChatOpenAI instance configured for the specified model
+    """
+    cache_key = f"{model}_{temperature}"
+    
+    if cache_key not in _llm_cache:
+        proxy_url = os.getenv("LITELLM_PROXY_URL", "http://localhost:4000")
+        api_key = os.getenv("LITELLM_API_KEY") or os.getenv("LITELLM_MASTER_KEY", "sk-1234")
+        
+        _llm_cache[cache_key] = ChatOpenAI(
+            base_url=proxy_url,
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            **kwargs
+        )
+    
+    return _llm_cache[cache_key]
 
 
-# Initialize LLM and structured output version
-llm = _initialize_llm()
-structured_llm = llm.with_structured_output(CompletionResponse)
-
-
-def get_completion(prompt: str, use_structured_output: bool = True) -> Union[str, CompletionResponse]:
+def get_completion(
+    prompt: str, 
+    model: str = "gpt-4.1-nano-2025-04-14",
+    temperature: float = 0,
+    use_structured_output: bool = True,
+    **kwargs
+) -> Union[str, CompletionResponse]:
     """
     Get a completion from the LLM via LiteLLM proxy.
     
     Args:
         prompt: The input prompt for the LLM
+        model: The model to use (default: "gpt-4.1-nano-2025-04-14")
+        temperature: Temperature setting for the model (default: 0)
         use_structured_output: Whether to return structured Pydantic object (default: True)
+        **kwargs: Additional parameters to pass to the model
         
     Returns:
         CompletionResponse object if use_structured_output=True, otherwise string
@@ -51,7 +75,10 @@ def get_completion(prompt: str, use_structured_output: bool = True) -> Union[str
         Exception: If the LLM request fails
     """
     try:
+        llm = _get_llm(model=model, temperature=temperature, **kwargs)
+        
         if use_structured_output:
+            structured_llm = llm.with_structured_output(CompletionResponse)
             response = structured_llm.invoke(prompt)
             return response
         else:
@@ -62,12 +89,20 @@ def get_completion(prompt: str, use_structured_output: bool = True) -> Union[str
         raise Exception(f"LLM completion failed: {str(e)}")
 
 
-def get_completion_json(prompt: str) -> dict:
+def get_completion_json(
+    prompt: str,
+    model: str = "gpt-4.1-nano-2025-04-14",
+    temperature: float = 0,
+    **kwargs
+) -> dict:
     """
     Get a completion as a JSON dictionary.
     
     Args:
         prompt: The input prompt for the LLM
+        model: The model to use (default: "gpt-4.1-nano-2025-04-14")
+        temperature: Temperature setting for the model (default: 0)
+        **kwargs: Additional parameters to pass to the model
         
     Returns:
         Dictionary representation of the CompletionResponse
@@ -76,18 +111,28 @@ def get_completion_json(prompt: str) -> dict:
         Exception: If the LLM request fails
     """
     try:
+        llm = _get_llm(model=model, temperature=temperature, **kwargs)
+        structured_llm = llm.with_structured_output(CompletionResponse)
         response = structured_llm.invoke(prompt)
         return response.model_dump()
     except Exception as e:
         raise Exception(f"LLM completion failed: {str(e)}")
 
 
-def get_completion_string(prompt: str) -> str:
+def get_completion_string(
+    prompt: str,
+    model: str = "gpt-4.1-nano-2025-04-14",
+    temperature: float = 0,
+    **kwargs
+) -> str:
     """
     Get a completion as a plain string (no structured output).
     
     Args:
         prompt: The input prompt for the LLM
+        model: The model to use (default: "gpt-4.1-nano-2025-04-14")
+        temperature: Temperature setting for the model (default: 0)
+        **kwargs: Additional parameters to pass to the model
         
     Returns:
         String response from the LLM
@@ -95,7 +140,7 @@ def get_completion_string(prompt: str) -> str:
     Raises:
         Exception: If the LLM request fails
     """
-    return get_completion(prompt, use_structured_output=False)
+    return get_completion(prompt, model=model, temperature=temperature, use_structured_output=False, **kwargs)
 
 
 if __name__ == "__main__":
