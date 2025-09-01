@@ -111,8 +111,7 @@ class AutoCommitHook(HookBase):
                                    '- File: {{filePath}}\n'
                                    '- Tool: {{toolName}}\n'
                                    '- Session: {{sessionId}}\n\n'
-                                   '🤖 Generated with Claude Code\n'
-                                   'Co-Authored-By: Claude <noreply@anthropic.com>',
+                                   '🤖 Generated with Claude Code',
             'excludePatterns': [
                 '*.log', '*.tmp', '*.temp', '.env*', '*.key', '*.pem', '*.p12', '*.pfx',
                 'node_modules/**', '.git/**', '*.pyc', '__pycache__/**'
