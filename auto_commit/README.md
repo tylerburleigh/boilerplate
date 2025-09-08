@@ -71,3 +71,9 @@ The hook automatically triggers after Claude uses any file editing tools (Write,
 - Ensure the script has execute permissions: `chmod +x ~/.claude/hooks/auto_commit.py`
 - Verify that `uv` is installed and in your PATH
 - Check that your git repository is properly initialized before using Claude to edit files
+
+# License and original source attribution
+
+MIT License
+
+This code is an adaptation of the `auto-commit` hook found here: https://github.com/rinadelph/Rapala
